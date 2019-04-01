@@ -1,0 +1,14 @@
+initscript {
+    repositories {
+        maven {
+            url new File('/home/yydcnjjw/workspace/code/project/jkls/jkls-plugins/gradle/jkls/build/repo')
+        }
+    }
+    dependencies {
+        classpath 'org.yydcnjjw.plugin:shadow-jkls:1.0'
+    }
+}
+
+allprojects {
+    apply plugin: org.yydcnjjw.gradle.plugin.JKLSPlugin
+}
