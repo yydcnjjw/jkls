@@ -6,12 +6,8 @@ import com.sun.source.util.TreeScanner
 import com.sun.source.util.Trees
 import org.yydcnjjw.jkls.lsp.Position
 import org.yydcnjjw.jkls.lsp.Range
-import org.yydcnjjw.jkls.project.IndexDecl
-import org.yydcnjjw.jkls.project.IndexFile
-import org.yydcnjjw.jkls.project.LanguageType
+import org.yydcnjjw.jkls.project.*
 import java.io.File
-import java.lang.Exception
-import java.text.ParseException
 import java.util.*
 import javax.tools.JavaCompiler
 import javax.tools.StandardJavaFileManager
@@ -53,6 +49,7 @@ class JavaFileParser(
         compilationUnitTrees.forEach { unit ->
             val indexFile = IndexFile(unit.sourceFile.name, LanguageType.JAVA)
 
+            // first index imports
             unit.imports.forEach {
 //                Logger(LogLevel.INFO, it.qualifiedIdentifier.toString())
             }
@@ -67,12 +64,14 @@ class JavaFileParser(
                     Tree.Kind.CLASS,
                     Tree.Kind.INTERFACE,
                     Tree.Kind.ANNOTATION_TYPE -> {
-
                         val classTree = it as ClassTree
 
-                        val range = getTreeRange(unit, classTree)
-                        indexFile.decl.add(IndexDecl(range, classTree.simpleName.toString()))
+                        Logger(LogLevel.DEBUG, "extend: ${classTree.extendsClause}")
 
+                        val interfaces = mutableListOf<ID>()
+
+                        val methods = mutableListOf<IndexMethodSymbol>()
+                        val fields = mutableListOf<IndexVarSymbol>()
                         classTree.members.forEach {
                             memberTree ->
                             // Logger(LogLevel.DEBUG, "${memberTree.kind}, $memberTree")
@@ -87,6 +86,19 @@ class JavaFileParser(
                                 Logger(LogLevel.DEBUG, "${memberTree.name}\n$variables")
                             }
                         }
+
+
+                        indexFile.decl.add(IndexClass(
+                                classTree.toString(),
+                                getTreeRange(unit, classTree),
+                                "", // document
+                                classTree.simpleName.toString(),
+                                IDGenerate.UNDEFINE,
+                                interfaces,
+                                fields,
+                                methods
+                        ))
+
                     }
                     else -> throw Exception("Not support global decl")
                 }

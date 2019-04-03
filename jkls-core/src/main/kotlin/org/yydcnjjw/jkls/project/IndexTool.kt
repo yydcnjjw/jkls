@@ -2,6 +2,15 @@ package org.yydcnjjw.jkls.project
 
 import org.yydcnjjw.jkls.lsp.Range
 import org.yydcnjjw.jkls.lsp.message.SymbolKind
+import java.util.concurrent.atomic.AtomicLong
+
+object IDGenerate{
+    const val UNDEFINE = -1L
+    private val id = AtomicLong(0)
+    operator fun invoke(): Long {
+        return id.getAndIncrement()
+    }
+}
 
 typealias ID = Long
 
@@ -10,56 +19,62 @@ data class IndexImport(
         val path: String
 )
 
-data class SymbolRef(
-        val id: ID,
-        val range: Range = Range(),
-        val kind: SymbolKind
-)
-
-class IndexMethod(
+abstract class IndexSymbol(
+        open val label: String,
+        open val kind: SymbolKind,
+        open val range: Range = Range(),
+        open val detail: String
 ) {
-    val name: String = ""
-    val hover: String = ""
-    val comments: String = ""
-    val vars = listOf<String>()
-    val refSymbols = listOf<String>()
+    val id = IDGenerate()
 }
 
-//class IndexClassField(
-//        range: Range,
-//        name: String,
-//
-//): IndexIdentifier(range, name)
+interface DeclRef {
+    val decl: ID
+    val refs: List<ID>
+}
 
-data class IndexDecl (
-        val range: Range,
-        val name: String,
-        val id: ID = -1
-)
+data class IndexVarSymbol(
+        override val label: String,
+        override val kind: SymbolKind,
+        override val range: Range,
+        override val detail: String
+): IndexSymbol(label, SymbolKind.Variable, range, detail), DeclRef {
+    override val decl = id
+    override val refs: List<ID> = mutableListOf()
+}
 
-//data class IndexClass (
-//        val range: Range,
-//        val className: String,
-//        val superClass: String,
-//        val interfaces: List<String>,
-//        val fields: List<String>,
-//        val methods: List<String>
-//)
+data class IndexMethodSymbol(
+        override val label: String,
+        override val range: Range,
+        override val detail: String
+): IndexSymbol(label, SymbolKind.Method, range, detail), DeclRef {
+    override val decl: ID = id
+    override val refs: List<ID> = mutableListOf()
+}
+
+data class IndexClass (
+        override val label: String,
+        override val range: Range,
+        override val detail: String,
+        val className: String,
+        val superClass: ID, // IndexClass
+        val interfaces: List<ID>, // IndexClass
+        val fields: List<IndexVarSymbol>,
+        val methods: List<IndexMethodSymbol>
+): IndexSymbol(label, SymbolKind.Class, range, detail), DeclRef {
+    override val decl: ID = id
+    override val refs: List<ID> = mutableListOf()
+}
 
 data class IndexFile(
         val path: String,
         val language: LanguageType,
-        val decl: MutableList<IndexDecl> = mutableListOf()
-) {
-
-}
+        val decl: MutableList<IndexSymbol> = mutableListOf(),
+        val import: MutableList<IndexImport> = mutableListOf()
+)
 
 enum class LanguageType {
     UNkNOWN,
     JAVA,
     KOTLIN
-}
-
-fun Index(
-) {
 }
